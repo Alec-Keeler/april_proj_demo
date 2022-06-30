@@ -17,29 +17,31 @@ router.get('/:id', async(req, res) => {
         include: {model: Review, attributes: ['id', 'content']},
     })
 
-    const numReviews = await Review.count({
-        where: {gameId: game.id}
-    })
-
-    const data = {}
-    data.game = {
-        id: game.id, 
-        name: game.name, 
-        maxPlayers: game.maxPlayers, 
-        avgRating: game.avgRating,
-        category: game.category,
-        createdAt: game.createdAt, 
-        updatedAt: game.updatedAt
-    }
-    data.numReviews = numReviews
-
-    data.reviews = game.Reviews
-
     if (!game) {
         const err = new Error('The specified boardgame does not exist')
         err.status = 404
-        res.json(err)
+        res.json({
+            message: err.message,
+            code: err.status
+        })
     } else {
+        const numReviews = await Review.count({
+            where: { gameId: game.id }
+        })
+
+        const data = {}
+        data.game = {
+            id: game.id,
+            name: game.name,
+            maxPlayers: game.maxPlayers,
+            avgRating: game.avgRating,
+            category: game.category,
+            createdAt: game.createdAt,
+            updatedAt: game.updatedAt
+        }
+        data.numReviews = numReviews
+
+        data.reviews = game.Reviews
         res.json(data)
     }
 })
