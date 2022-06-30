@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Boardgame, Review, sequelize } = require('../../db/models');
+const { requireAuth } = require('../../utils/auth');
 
 router.get('/', async(req, res) => {
     const games = await Boardgame.findAll({
@@ -46,5 +47,47 @@ router.get('/:id', async(req, res) => {
     }
 })
 
+const checkContent = (req, res, next) => {
+    const { content } = req.body;
+    if (content.length > 10) {
+        next()
+    } else {
+        const err = new Error('Please provide content longer than 10 characters')
+        err.status = 400
+        res.json({message: err.message, code: err.status})
+    }
+}
+
+router.post('/:id/reviews', requireAuth, checkContent, async(req, res, next) => {
+    const {content} = req.body;
+    const gameId = req.params.id;
+    const userId = req.user.id;
+
+    const existingReview = await Review.findOne({
+        where: {gameId, userId}
+    })
+
+    console.log(existingReview)
+
+    const game = await Boardgame.findByPk(gameId);
+
+    if (existingReview) {
+        const err = new Error('You have already reviewed this game')
+        err.status = 403;
+        return next(err)
+    } else if (!game) {
+        const err = new Error('There is no game with the provided id')
+        err.status = 404
+        return next(err)
+    }
+
+    const review = await Review.create({
+        content,
+        gameId,
+        userId
+    })
+
+    res.json(review)
+})
 
 module.exports = router;
